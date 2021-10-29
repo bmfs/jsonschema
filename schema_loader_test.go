@@ -114,3 +114,44 @@ func TestCustomSchemaLoader(t *testing.T) {
 	}
 
 }
+
+func TestLoaderRegistryCopy(t *testing.T) {
+
+	dummyURL, _ := url.Parse("dummy://something")
+
+	executedLoader := ""
+	dummyLoader := func(ctx context.Context, uri *url.URL, schema *jsonschema.Schema) error {
+		executedLoader = "dummyLoader"
+		return nil
+	}
+
+	dummyLoader2 := func(ctx context.Context, uri *url.URL, schema *jsonschema.Schema) error {
+		executedLoader = "dummyLoader2"
+		return nil
+	}
+
+	originRegistry := jsonschema.NewLoaderRegistry()
+	originRegistry.Register("dummy", dummyLoader)
+
+	copyRegistry := originRegistry.Copy()
+
+	if _, exists := copyRegistry.Get("dummy"); !exists {
+		t.Errorf("expected 'dummy' loader to exists")
+	}
+
+	copyRegistry.Register("dummy", dummyLoader2)
+
+	loaderInOrigin, _ := originRegistry.Get("dummy")
+	loaderInCopy, _ := copyRegistry.Get("dummy")
+
+	loaderInCopy(context.Background(), dummyURL, nil)
+	if executedLoader != "dummyLoader2" {
+		t.Errorf("expected 'dummy' loader function to have been overridden")
+	}
+
+	loaderInOrigin(context.Background(), dummyURL, nil)
+	if executedLoader != "dummyLoader" {
+		t.Errorf("expected original 'dummy' loader function to not have been overridden")
+	}
+
+}

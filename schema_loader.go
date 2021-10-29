@@ -7,9 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 var lr *LoaderRegistry
+var lrLock sync.Mutex
 
 // LoaderRegistry maintains a lookup table between uri schemes and associated loader
 type LoaderRegistry struct {
@@ -43,16 +45,36 @@ func (r *LoaderRegistry) Get(scheme string) (SchemaLoaderFunc, bool) {
 	return l, exists
 }
 
+// Copy returns a copy of the loader registry
+func (r *LoaderRegistry) Copy() *LoaderRegistry {
+	nr := NewLoaderRegistry()
+
+	for key, loader := range r.loaderLookup {
+		nr.Register(key, loader)
+	}
+
+	return nr
+}
+
 // GetSchemaLoaderRegistry provides an accessor to a globally available (schema) loader registry
 func GetSchemaLoaderRegistry() *LoaderRegistry {
+	lrLock.Lock()
 	if lr == nil {
 		lr = NewLoaderRegistry()
 	}
+	lrLock.Unlock()
 	return lr
 }
 
 // FetchSchema downloads and loads a schema from a remote location
 func FetchSchema(ctx context.Context, uri string, schema *Schema) error {
+	globalRegistry := GetSchemaLoaderRegistry()
+	return FetchSchemaWithRegistry(ctx, uri, schema, globalRegistry)
+}
+
+// FetchSchemaWithRegistry downloads and loads a schema from a remote location using a specific LoaderRegistry
+// The global loader registry will be used if no registry is passed
+func FetchSchemaWithRegistry(ctx context.Context, uri string, schema *Schema, registry *LoaderRegistry) error {
 	schemaDebug(fmt.Sprintf("[FetchSchema] Fetching: %s", uri))
 	u, err := url.Parse(uri)
 	if err != nil {
