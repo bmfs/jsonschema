@@ -306,7 +306,7 @@ func (r *Ref) _resolveRef(ctx context.Context, currentState *ValidationState) {
 				}
 			}
 		}
-		r.resolvedRoot = GetSchemaRegistry().Get(ctx, address)
+		r.resolvedRoot = currentState.TopSchemaRegistry.Get(ctx, address)
 	} else {
 		r.resolvedRoot = currentState.Root
 	}
@@ -315,7 +315,7 @@ func (r *Ref) _resolveRef(ctx context.Context, currentState *ValidationState) {
 		return
 	}
 
-	knownSchema := GetSchemaRegistry().GetKnown(r.reference)
+	knownSchema := currentState.TopSchemaRegistry.GetKnown(r.reference)
 	if knownSchema != nil {
 		r.resolved = knownSchema
 		return
@@ -444,7 +444,7 @@ func (r *RecursiveRef) _resolveRef(ctx context.Context, currentState *Validation
 			currentState.AddError(nil, fmt.Sprintf("base uri not set"))
 			return
 		}
-		baseSchema := GetSchemaRegistry().Get(ctx, currentState.BaseURI)
+		baseSchema := currentState.TopSchemaRegistry.Get(ctx, currentState.BaseURI)
 		if baseSchema != nil && baseSchema.HasKeyword("$recursiveAnchor") {
 			r.resolvedRoot = currentState.RecursiveAnchor
 		}
@@ -501,7 +501,7 @@ func (r *RecursiveRef) _resolveRef(ctx context.Context, currentState *Validation
 					}
 				}
 			}
-			r.resolvedRoot = GetSchemaRegistry().Get(ctx, address)
+			r.resolvedRoot = currentState.TopSchemaRegistry.Get(ctx, address)
 		} else {
 			r.resolvedRoot = currentState.Root
 		}
@@ -511,7 +511,7 @@ func (r *RecursiveRef) _resolveRef(ctx context.Context, currentState *Validation
 		return
 	}
 
-	knownSchema := GetSchemaRegistry().GetKnown(r.reference)
+	knownSchema := currentState.TopSchemaRegistry.GetKnown(r.reference)
 	if knownSchema != nil {
 		r.resolved = knownSchema
 		return

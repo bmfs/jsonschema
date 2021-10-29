@@ -81,7 +81,9 @@ func FetchSchemaWithRegistry(ctx context.Context, uri string, schema *Schema, re
 		return err
 	}
 
-	registry := GetSchemaLoaderRegistry()
+	if registry == nil {
+		return fmt.Errorf("missing registry parameter")
+	}
 
 	loader, exists := registry.Get(u.Scheme)
 

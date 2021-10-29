@@ -40,11 +40,29 @@ type Schema struct {
 	extraDefinitions map[string]json.RawMessage
 	keywords         map[string]Keyword
 	orderedkeywords  []string
+
+	// topSchemaRegistry will be shared with all children schemas (on unmarshelling)
+	topSchemaRegistry *SchemaRegistry
 }
 
 // NewSchema allocates a new Schema Keyword/Validator
 func NewSchema() Keyword {
 	return &Schema{}
+}
+
+func (s *Schema) SetSchemaRegistry(r *SchemaRegistry) {
+	s.topSchemaRegistry = r
+}
+
+func (s *Schema) GetSchemaRegistry() *SchemaRegistry {
+	if s.topSchemaRegistry == nil {
+		if UseScopedRegistries {
+			s.topSchemaRegistry = GetSchemaRegistry().Copy()
+		} else {
+			s.topSchemaRegistry = GetSchemaRegistry()
+		}
+	}
+	return s.topSchemaRegistry
 }
 
 // HasKeyword is a utility function for checking if the given schema
@@ -80,7 +98,7 @@ func (s *Schema) Register(uri string, registry *SchemaRegistry) {
 			docURI = u.String()
 		}
 		s.docPath = docURI
-		GetSchemaRegistry().Register(s)
+		s.GetSchemaRegistry().Register(s)
 		uri = docURI
 	}
 
@@ -167,15 +185,20 @@ type _schema struct {
 
 // UnmarshalJSON implements the json.Unmarshaler interface for Schema
 func (s *Schema) UnmarshalJSON(data []byte) error {
+	// ensure top schema registry has been initialized for root schema
+	if s.topSchemaRegistry == nil {
+		s.GetSchemaRegistry()
+	}
+
 	var b bool
 	if err := json.Unmarshal(data, &b); err == nil {
 		if b {
 			// boolean true Always passes validation, as if the empty schema {}
-			*s = Schema{schemaType: schemaTypeTrue}
+			*s = Schema{schemaType: schemaTypeTrue, topSchemaRegistry: s.topSchemaRegistry}
 			return nil
 		}
 		// boolean false Always fails validation, as if the schema { "not":{} }
-		*s = Schema{schemaType: schemaTypeFalse}
+		*s = Schema{schemaType: schemaTypeFalse, topSchemaRegistry: s.topSchemaRegistry}
 		return nil
 	}
 
@@ -188,8 +211,9 @@ func (s *Schema) UnmarshalJSON(data []byte) error {
 	}
 
 	sch := &Schema{
-		id:       _s.ID,
-		keywords: map[string]Keyword{},
+		id:                _s.ID,
+		keywords:          map[string]Keyword{},
+		topSchemaRegistry: s.topSchemaRegistry,
 	}
 
 	valprops := map[string]json.RawMessage{}

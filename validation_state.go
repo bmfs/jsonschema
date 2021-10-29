@@ -19,6 +19,7 @@ type ValidationState struct {
 
 	LocalRegistry        *SchemaRegistry
 	LocalKeywordRegistry *KeywordRegistry
+	TopSchemaRegistry    *SchemaRegistry
 
 	EvaluatedPropertyNames      *map[string]bool
 	LocalEvaluatedPropertyNames *map[string]bool
@@ -43,7 +44,8 @@ func NewValidationState(s *Schema) *ValidationState {
 		BaseRelativeLocation:        &tmpBRLprt,
 		RelativeLocation:            &tmpRLprt,
 		InstanceLocation:            &tmpILprt,
-		LocalRegistry:               &SchemaRegistry{},
+		LocalRegistry:               NewSchemaRegistry(),
+		TopSchemaRegistry:           s.GetSchemaRegistry(),
 		LastEvaluatedIndex:          -1,
 		LocalLastEvaluatedIndex:     -1,
 		EvaluatedPropertyNames:      &map[string]bool{},
@@ -67,6 +69,7 @@ func (vs *ValidationState) NewSubState() *ValidationState {
 		RelativeLocation:            vs.RelativeLocation,
 		BaseRelativeLocation:        vs.RelativeLocation,
 		LocalRegistry:               vs.LocalRegistry,
+		TopSchemaRegistry:           vs.TopSchemaRegistry,
 		EvaluatedPropertyNames:      vs.EvaluatedPropertyNames,
 		LocalEvaluatedPropertyNames: vs.LocalEvaluatedPropertyNames,
 		Misc:                        map[string]interface{}{},
